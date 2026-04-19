@@ -1,4 +1,4 @@
-import { MatchArraySchema } from "../src/lib/schemas";
+import { MatchesSchema as MatchArraySchema } from "../src/lib/matches";
 import matchesData from "../public/matches.json";
 
 const result = MatchArraySchema.safeParse(matchesData);

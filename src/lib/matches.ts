@@ -10,14 +10,14 @@ const MatchSchema = z.object({
   group: z.string().nullable(),
 });
 
-const MatchesSchema = z.array(MatchSchema).min(1);
+export const MatchesSchema = z.array(MatchSchema).min(1);
 
 let _matches: Match[] | null = null;
 
 export function getMatches(): Match[] {
   if (_matches) return _matches;
 
-  const raw: unknown = require('@/public/matches.json');
+  const raw: unknown = require('../../public/matches.json');
   const result = MatchesSchema.safeParse(raw);
 
   if (!result.success) {

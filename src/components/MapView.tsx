@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { renderToString } from 'react-dom/server';
 import { Bus, Train } from 'lucide-react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { importLibrary, setOptions } from '@googlemaps/js-api-loader';
 import useSWR from 'swr';
 import type { Vehicle, MartaApiResponse } from '@/types';
 
@@ -65,13 +65,9 @@ export default function MapView() {
   useEffect(() => {
     if (!apiKey || mapInstanceRef.current) return;
 
-    const loader = new Loader({
-      apiKey,
-      version: 'weekly',
-      libraries: ['maps', 'marker'],
-    });
+    setOptions({ key: apiKey, v: 'weekly' });
 
-    loader.load().then(() => {
+    Promise.all([importLibrary('maps'), importLibrary('marker')]).then(() => {
       if (!mapRef.current) return;
 
       const map = new google.maps.Map(mapRef.current, {

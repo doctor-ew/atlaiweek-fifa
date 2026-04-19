@@ -1,11 +1,11 @@
 import useSWR from "swr";
-import type { TransitVehicle } from "@/lib/types";
+import type { MartaApiResponse } from "@/types";
 
 class FetchError extends Error {
   status?: number;
 }
 
-const fetcher = async (url: string): Promise<{ vehicles: TransitVehicle[] }> => {
+const fetcher = async (url: string): Promise<MartaApiResponse> => {
   const res = await fetch(url);
   if (!res.ok) {
     const err = new FetchError("MARTA fetch failed");
@@ -16,7 +16,7 @@ const fetcher = async (url: string): Promise<{ vehicles: TransitVehicle[] }> => 
 };
 
 export function useMartaData() {
-  const { data, error, isLoading } = useSWR<{ vehicles: TransitVehicle[] }, FetchError>(
+  const { data, error, isLoading } = useSWR<MartaApiResponse, FetchError>(
     "/api/marta",
     fetcher,
     {
@@ -29,7 +29,7 @@ export function useMartaData() {
   );
 
   return {
-    vehicles: data?.vehicles,
+    vehicles: data?.vehicles ?? [],
     isLoading,
     isError: !!error,
   };

@@ -1,72 +1,60 @@
-"use client";
+'use client';
 
-import type { Match } from "@/lib/schemas";
+import type { Match } from '@/types';
 
 interface Props {
   matches: Match[];
-  selected: Match | null;
-  onSelect: (match: Match) => void;
-  disabled?: boolean;
+  selected: string | null;
+  onSelect: (matchId: string) => void;
 }
 
-function formatKickoff(utc: string): string {
-  return new Date(utc).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "America/New_York",
+function formatKickoff(kickoff_utc: string): string {
+  return new Date(kickoff_utc).toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
   });
 }
 
-function matchTitle(match: Match): string {
-  if (match.team_a === "TBD" && match.team_b === "TBD") return match.stage;
-  return `${match.team_a} vs. ${match.team_b}`;
-}
-
-function matchSubtitle(match: Match): string {
-  if (match.group) return `Group ${match.group} · Mercedes-Benz Stadium`;
-  return `${match.stage} · Mercedes-Benz Stadium`;
-}
-
-export function MatchSelector({ matches, selected, onSelect, disabled }: Props) {
+export default function MatchSelector({ matches, selected, onSelect }: Props) {
   return (
-    <div
-      role="listbox"
-      aria-label="Select match"
-      className={["flex flex-col gap-2", disabled ? "opacity-40 pointer-events-none" : ""].join(" ")}
-      aria-disabled={disabled}
-    >
-      {matches.map((match) => {
-        const isSelected = selected?.match_id === match.match_id;
-        return (
-          <button
-            key={match.match_id}
-            role="option"
-            aria-selected={isSelected}
-            onClick={() => onSelect(match)}
-            className={[
-              "flex flex-col items-start w-full px-3 py-3 rounded-lg border text-left transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
-              isSelected
-                ? "border-l-4 border-accent bg-bg"
-                : "border-border bg-bg hover:bg-border/20",
-            ].join(" ")}
-          >
-            <span className="text-sm font-semibold text-text leading-snug">
-              {matchTitle(match)}
-            </span>
-            <span className="text-xs text-muted mt-1 leading-snug">
-              {matchSubtitle(match)}
-            </span>
-            <span className="flex items-center gap-1 text-xs text-muted mt-1.5">
-              <span aria-hidden="true">📅</span>
-              {formatKickoff(match.kickoff_utc)}
-            </span>
-          </button>
-        );
-      })}
+    <div className="flex flex-col gap-1">
+      <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+        Select Match
+      </h2>
+      <ul className="flex flex-col gap-1" role="listbox" aria-label="FIFA matches">
+        {matches.map((m) => {
+          const isSelected = selected === m.match_id;
+          return (
+            <li key={m.match_id} role="option" aria-selected={isSelected}>
+              <button
+                type="button"
+                onClick={() => onSelect(m.match_id)}
+                className={[
+                  'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors',
+                  isSelected
+                    ? 'bg-green-700 text-white'
+                    : 'bg-gray-800 text-gray-200 hover:bg-gray-700',
+                ].join(' ')}
+              >
+                <div className="font-medium">
+                  {m.team_a === 'TBD'
+                    ? m.stage
+                    : `${m.team_a} vs ${m.team_b}`}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {m.stage}
+                  {m.group != null ? ` · Group ${m.group}` : ''} ·{' '}
+                  {formatKickoff(m.kickoff_utc)} ET
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

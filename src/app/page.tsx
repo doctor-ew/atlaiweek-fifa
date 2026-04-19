@@ -1,17 +1,26 @@
-import { HomeClient } from "./HomeClient";
-import matchesData from "../../public/matches.json";
-import { MatchArraySchema } from "@/lib/schemas";
+import type { DelayState } from '@/types';
+import { getMatches } from '@/lib/matches';
+import MapViewClient from '@/components/MapViewClient';
+import Sidebar from '@/components/Sidebar';
+import DelayBanner from '@/components/DelayBanner';
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ inject_delay?: string }>;
-}) {
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function Page({ searchParams }: PageProps) {
   const params = await searchParams;
-  const injectDelay = params.inject_delay === "gold_line";
+  const injectDelay = params['inject_delay'];
+  const delayState: DelayState =
+    injectDelay === 'blue_line' ? 'blue_line_delay' : 'normal';
 
-  // Validate at startup — throws (500) if matches.json is malformed
-  const matches = MatchArraySchema.parse(matchesData);
+  const matches = getMatches();
 
-  return <HomeClient matches={matches} injectDelay={injectDelay} />;
+  return (
+    <main className="relative h-full w-full">
+      {delayState === 'blue_line_delay' && <DelayBanner />}
+      <MapViewClient />
+      <Sidebar matches={matches} delayState={delayState} />
+    </main>
+  );
 }

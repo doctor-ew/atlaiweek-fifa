@@ -1,66 +1,58 @@
-import { streamText } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
-import { FALLBACK_RESPONSES, type Zone } from "@/lib/fallbacks";
-import { RecommendRequestSchema } from "@/lib/schemas";
+import { streamText } from 'ai';
+import { anthropic } from '@ai-sdk/anthropic';
+import { getFallback } from '@/lib/fallbacks';
+import { getMatch } from '@/lib/matches';
+import { buildSystemPrompt, buildUserPrompt } from '@/lib/prompt';
+import type { RecommendRequest, Zone, DelayState } from '@/types';
 
-export const maxDuration = 30;
+const ZONES = new Set<Zone>([
+  'downtown', 'midtown', 'airport', 'decatur', 'dunwoody',
+]);
+const DELAY_STATES = new Set<DelayState>(['normal', 'blue_line_delay']);
 
-const SYSTEM_PROMPT = `You are a local Atlanta friend who knows MARTA well. You help FIFA World Cup fans get to Mercedes-Benz Stadium. You speak plainly, like someone texting a friend. Never sound like a transit app. Never say "Route A", "minutes saved", or "optimal path." If MARTA is bad, say so and give the real workaround. Max 3 sentences.`;
-
-function getFallback(zone: string, injectDelay: boolean): string {
-  const key = (zone as Zone) in FALLBACK_RESPONSES ? (zone as Zone) : "generic";
-  return FALLBACK_RESPONSES[key][injectDelay ? "delay" : "normal"];
+function fallbackResponse(zone: Zone, delayState: DelayState): Response {
+  return new Response(getFallback(zone, delayState), {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  });
 }
 
-export async function POST(req: Request) {
-  let body: unknown;
+export async function POST(req: Request): Promise<Response> {
+  let body: Partial<RecommendRequest>;
   try {
-    body = await req.json();
+    body = await req.json() as Partial<RecommendRequest>;
   } catch {
-    return new Response("Invalid JSON", { status: 400 });
+    return new Response('Bad request', { status: 400 });
   }
 
-  const parsed = RecommendRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return new Response("Missing or invalid zone or match", { status: 400 });
+  const zone = body.zone;
+  const matchId = body.match_id;
+  const delayState = body.delay_state ?? 'normal';
+
+  if (!zone || !ZONES.has(zone) || !matchId || !DELAY_STATES.has(delayState)) {
+    return new Response('Bad request', { status: 400 });
   }
 
-  const { zone, match, injectDelay } = parsed.data;
-
-  // Kill switch: skip Anthropic, return pre-baked response
-  if (process.env.USE_MOCK_CLAUDE === "true") {
-    return new Response(getFallback(zone, injectDelay), {
-      headers: { "Content-Type": "text/plain" },
-    });
+  if (process.env.USE_MOCK_CLAUDE === 'true') {
+    return fallbackResponse(zone, delayState);
   }
 
-  const statusString = injectDelay
-    ? "Gold Line: Moderate congestion — 20+ min delays at Vine City"
-    : "Gold Line and Blue Line running on schedule";
-
-  const minutesToKickoff = Math.round(
-    (new Date(match.kickoff_utc).getTime() - Date.now()) / 60000
-  );
-
-  const userPrompt = `I'm in ${zone}. The match (${match.team_a} vs ${match.team_b}) kicks off in ${minutesToKickoff} minutes. MARTA status: ${statusString}. What should I do?`;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const match = getMatch(matchId);
+  if (!match) return fallbackResponse(zone, delayState);
 
   try {
-    const result = await streamText({
-      model: anthropic("claude-sonnet-4-6"),
-      system: SYSTEM_PROMPT,
-      prompt: userPrompt,
-      abortSignal: controller.signal,
+    const result = streamText({
+      model: anthropic('claude-sonnet-4-6'),
+      system: buildSystemPrompt(),
+      messages: [
+        { role: 'user', content: buildUserPrompt(zone, match, delayState) },
+      ],
+      maxOutputTokens: 150,
+      abortSignal: AbortSignal.timeout(8000),
     });
 
-    clearTimeout(timeout);
     return result.toTextStreamResponse();
-  } catch {
-    clearTimeout(timeout);
-    return new Response(getFallback(zone, injectDelay), {
-      headers: { "Content-Type": "text/plain" },
-    });
+  } catch (err) {
+    console.error('[/api/recommend] Claude failed:', err);
+    return fallbackResponse(zone, delayState);
   }
 }

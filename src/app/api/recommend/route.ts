@@ -10,9 +10,19 @@ const ZONES = new Set<Zone>([
 ]);
 const DELAY_STATES = new Set<DelayState>(['normal', 'blue_line_delay']);
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export function OPTIONS(): Response {
+  return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
 function fallbackResponse(zone: Zone, delayState: DelayState): Response {
   return new Response(getFallback(zone, delayState), {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', ...CORS_HEADERS },
   });
 }
 
@@ -41,7 +51,7 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const result = streamText({
-      model: anthropic('claude-sonnet-4-6'),
+      model: anthropic('claude-sonnet-4.6'),
       system: buildSystemPrompt(),
       messages: [
         { role: 'user', content: buildUserPrompt(zone, match, delayState) },
@@ -50,7 +60,7 @@ export async function POST(req: Request): Promise<Response> {
       abortSignal: AbortSignal.timeout(8000),
     });
 
-    return result.toTextStreamResponse();
+    return result.toTextStreamResponse({ headers: CORS_HEADERS });
   } catch (err) {
     console.error('[/api/recommend] Claude failed:', err);
     return fallbackResponse(zone, delayState);

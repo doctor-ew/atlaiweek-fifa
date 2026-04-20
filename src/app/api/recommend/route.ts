@@ -51,7 +51,7 @@ export async function POST(req: Request): Promise<Response> {
 
   try {
     const result = streamText({
-      model: anthropic('claude-sonnet-4.6'),
+      model: anthropic('claude-sonnet-4-6'),
       system: buildSystemPrompt(),
       messages: [
         { role: 'user', content: buildUserPrompt(zone, match, delayState) },

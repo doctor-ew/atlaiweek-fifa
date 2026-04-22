@@ -5,6 +5,7 @@ import type { Match, Zone, DelayState } from '@/types';
 import MatchSelector from './MatchSelector';
 import ZonePicker from './ZonePicker';
 import RecommendationArea from './RecommendationArea';
+import MartaStatusCard from './MartaStatusCard';
 
 interface Props {
   matches: Match[];
@@ -35,6 +36,8 @@ export default function Sidebar({ matches, delayState }: Props) {
         selected={selectedZone}
         onSelect={setSelectedZone}
       />
+
+      <MartaStatusCard />
 
       <button
         type="button"

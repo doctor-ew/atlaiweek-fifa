@@ -2,7 +2,7 @@
 
 **Issue:** [#2 — feat: MartaStatusCard — real-time MARTA service status for Match Day sidebar](https://github.com/doctor-ew/atlaiweek-fifa/issues/2)  
 **Mode:** Story  
-**Branch:** demo-test0
+**Branch:** GH-2
 
 ---
 
@@ -10,7 +10,7 @@
 
 Fans using the Match Day ATL app can get transit directions from Claude, but have no way to know whether their MARTA line is currently running *before* they ask. The sidebar has match selector, zone picker, and CTA — but no live transit health signal. `MartaStatusCard` fills this gap: a compact, auto-refreshing card showing Gold, Blue, and College Park line status derived from the existing `/api/marta` vehicle feed.
 
-**Demo constraint:** 20-minute live demo on `demo-test0` branch. Card must be visually complete and never crash.
+**Demo constraint:** 20-minute live demo on `GH-2` branch. Card must be visually complete and never crash.
 
 ---
 
@@ -20,7 +20,7 @@ Fans using the Match Day ATL app can get transit directions from Claude, but hav
 - Sidebar is `w-80` (320px) — card must fit without overflow or layout shift
 - **Reuse `useMartaData` hook** — do not create a second SWR call to `/api/marta`
 - `useMartaData` uses `refreshInterval: 10000` (10s) — faster than PRD's 30s; keep existing config unchanged
-- Design tokens: semantic only — `bg-surface`, `border-border`, `text-text`, `text-muted`, `text-accent` (amber/Gold), `text-delay` (orange/College Park), Tailwind `text-blue-400` (Blue line), Tailwind `text-green-500` / `text-yellow-500` / `text-red-500` (status dots only)
+- Design tokens: raw Tailwind only — `text-amber-400` (Gold line name), `text-blue-400` (Blue line name), `text-orange-400` (College Park name), `text-gray-400` (muted text), `bg-gray-800` (card background), `border-gray-700` (dividers); `text-green-500` / `text-yellow-500` / `text-red-500` (status dots only). No semantic CSS custom properties exist in `globals.css`.
 - TypeScript strict — no `any`
 - No new dependencies
 
@@ -30,13 +30,13 @@ Fans using the Match Day ATL app can get transit directions from Claude, but hav
 
 ### Status derivation
 
-Filter `TransitVehicle[]` from `useMartaData()` per line:
+Filter `Vehicle[]` (from `@/types`) from `useMartaData()` per line:
 
-| Line | Filter | Route ID |
-|------|--------|----------|
-| Gold | `v.type === 'train' && v.route === 'GOLD'` | `"GOLD"` |
-| Blue | `v.type === 'train' && v.route === 'BLUE'` | `"BLUE"` |
-| College Park | `v.type === 'bus'` | proxy — no dedicated route ID in API |
+| Line | Filter | Route value |
+|------|--------|-------------|
+| Gold | `v.type === 'train' && v.route === 'Gold Line'` | `"Gold Line"` (mapped by `LINE_NAME_MAP` in `src/lib/marta.ts`) |
+| Blue | `v.type === 'train' && v.route === 'Blue Line'` | `"Blue Line"` (mapped by `LINE_NAME_MAP` in `src/lib/marta.ts`) |
+| College Park | `v.type === 'bus'` | proxy — bus `route` values are numeric route IDs, no College Park ID |
 
 Status thresholds (vehicle count per line):
 - 🟢 **On Schedule** — ≥ 2 vehicles
@@ -54,27 +54,26 @@ Not returned by `/api/marta`. Track locally: `useState<Date | null>` initialized
 
 ```
 MartaStatusCard                          ← default export
-  ├── header row: "MARTA Service"  +  "Updated HH:MM" (text-muted, text-xs)
+  ├── header row: "MARTA Service"  +  "Updated HH:MM" (text-gray-400, text-xs)
   ├── <LineRow> × 3
-  │     ├── colored dot  (status: green/yellow/red)
-  │     ├── line name    (color: text-accent / text-blue-400 / text-delay)
-  │     └── status label (text-muted, text-xs)
-  ├── loading state: three skeleton rows  (animate-pulse, bg-border)
-  └── error state: "Status unavailable"  (text-muted, text-xs, text-center)
+  │     ├── colored dot  (status: text-green-500 / text-yellow-500 / text-red-500)
+  │     ├── line name    (color: text-amber-400 / text-blue-400 / text-orange-400)
+  │     └── status label (text-gray-400, text-xs)
+  ├── loading state: three skeleton rows  (animate-pulse, bg-gray-700)
+  └── error state: "Status unavailable"  (text-gray-400, text-xs, text-center)
 ```
 
-### Insertion point in HomeClient
+### Insertion point in Sidebar
 
-Insert after the zone picker section (after `</div>` closing line 117), before CTA section (line 119). Pattern follows existing section dividers.
+Insert in `src/components/Sidebar.tsx` after `<ZonePicker>` (line 37), before the CTA `<button>` (line 39). Pattern follows the existing `gap-4` flex column — no explicit divider element needed.
 
 ```tsx
-{/* Divider */}
-<div className="border-t border-border mx-4 my-3" />
+<MartaStatusCard />
+```
 
-{/* MARTA status */}
-<div className="px-4 pb-2">
-  <MartaStatusCard />
-</div>
+Import at top of file:
+```tsx
+import MartaStatusCard from './MartaStatusCard';
 ```
 
 ---
@@ -83,15 +82,15 @@ Insert after the zone picker section (after `</div>` closing line 117), before C
 
 | File | Change | Notes |
 |------|--------|-------|
-| `src/components/MartaStatusCard.tsx` | CREATE | New component; `"use client"` not needed — consumes `useMartaData` which handles client state |
-| `src/app/HomeClient.tsx` | EDIT lines 117–119 | Add divider + section + `<MartaStatusCard />` import |
+| `src/components/MartaStatusCard.tsx` | CREATE | New component; `"use client"` required — uses `useState`, `useEffect`, `useMartaData` |
+| `src/components/Sidebar.tsx` | EDIT lines 37–39 | Add `<MartaStatusCard />` between ZonePicker and CTA button; add import |
 
 ---
 
 ## Acceptance Criteria
 
 **GIVEN** the sidebar renders with vehicle data  
-**WHEN** `useMartaData` returns `[TRAIN001/GOLD, TRAIN002/BLUE]`  
+**WHEN** `useMartaData` returns `[{ type:'train', route:'Gold Line' }, { type:'train', route:'Blue Line' }]`  
 **THEN** Gold Line row shows amber label + 🟢 On Schedule; Blue Line shows blue label + 🟢 On Schedule; College Park shows orange label + 🔴 Major Delays (0 buses)
 
 **GIVEN** `/api/marta` returns an error  
@@ -128,7 +127,7 @@ Insert after the zone picker section (after `</div>` closing line 117), before C
 
 ## Test Plan
 
-1. Mock `useMartaData` returning `[TRAIN001/GOLD, TRAIN002/BLUE]` → Gold On Schedule, Blue On Schedule, College Park Major Delays
+1. Mock `useMartaData` returning `[{ type:'train', route:'Gold Line' }, { type:'train', route:'Blue Line' }]` → Gold On Schedule, Blue On Schedule, College Park Major Delays
 2. Mock returning empty `[]` → all three lines show 🔴 Major Delays
 3. Mock `isError: true` → "Status unavailable" shown, no throw
 4. Mock `isLoading: true` → skeleton rows shown
@@ -139,7 +138,7 @@ Insert after the zone picker section (after `</div>` closing line 117), before C
 
 ## Model Router
 
-Files to change: 2 (`src/components/` + `src/app/`). No architecture decision. No shared contract change (component is self-contained, `useMartaData` signature unchanged). Standard UI component addition pattern.
+Files to change: 2 (`src/components/MartaStatusCard.tsx` CREATE + `src/components/Sidebar.tsx` EDIT). No architecture decision. No shared contract change (component is self-contained, `useMartaData` signature unchanged). Standard UI component addition pattern.
 
 **Decision:** Sonnet / General Engineer
 
@@ -147,10 +146,10 @@ Files to change: 2 (`src/components/` + `src/app/`). No architecture decision. N
 
 ## Sources
 
-- `src/hooks/useMartaData.ts:1-36` (branch: demo-test0, commit: c0e0fd9) — confirms SWR wiring, `refreshInterval: 10000`, return shape `{ vehicles, isLoading, isError }`
-- `src/app/api/marta/route.ts:5-11` (branch: demo-test0, commit: c0e0fd9) — confirms `TransitVehicle.route` values `"GOLD"`, `"BLUE"` for trains; buses have numeric route IDs `"1"`, `"2"`, `"3"`
-- `src/app/api/marta/route.ts:59-72` (branch: demo-test0, commit: c0e0fd9) — confirms live train data uses `t.LINE` mapped to `route` field; no College Park route ID present
-- `src/lib/types.ts:1-7` (branch: demo-test0, commit: c0e0fd9) — confirms `TransitVehicle` interface: `id`, `type: "bus" | "train"`, `latitude`, `longitude`, `route: string`
-- `src/app/HomeClient.tsx:82` (branch: demo-test0, commit: c0e0fd9) — confirms sidebar `w-80`, `overflow-hidden`
-- `src/app/HomeClient.tsx:111-117` (branch: demo-test0, commit: c0e0fd9) — confirms insertion point: after zone picker `</div>` at line 117, before CTA `<div>` at line 119
-- `src/app/globals.css:1-42` (branch: demo-test0, commit: c0e0fd9) — confirms semantic token map: `text-accent` = amber `#e8a838`, `text-delay` = orange `#f0883e`, `text-muted`, `bg-surface`, `border-border`; no raw gray/amber tokens present
+- `src/hooks/useMartaData.ts:1-36` (branch: GH-2, commit: 68c53c4) — confirms SWR wiring, `refreshInterval: 10000`, return shape `{ vehicles: Vehicle[], isLoading, isError }`
+- `src/lib/marta.ts:9-14` (branch: GH-2, commit: 68c53c4) — confirms `LINE_NAME_MAP`: `GOLD → 'Gold Line'`, `BLUE → 'Blue Line'`; route values on `Vehicle.route` are full line names, not raw codes
+- `src/lib/marta.ts:16-23` (branch: GH-2, commit: 68c53c4) — confirms mock vehicles use `route: 'Blue Line'`, `route: 'Gold Line'`; bus routes are numeric strings (`'Route 110'`)
+- `src/lib/marta.ts:65-73` (branch: GH-2, commit: 68c53c4) — confirms live train `Vehicle.route` is set via `LINE_NAME_MAP[t.LINE]`; no College Park train route present
+- `src/types/index.ts:1-9` (branch: GH-2, commit: 68c53c4) — confirms `Vehicle` interface: `id: string`, `type: 'bus' | 'train'`, `route: string`, `lat: number`, `lng: number`
+- `src/components/Sidebar.tsx:22` (branch: GH-2, commit: 68c53c4) — confirms sidebar `w-80`, `overflow-y-auto`, `flex-col gap-4`; insertion point after line 37 (`</ZonePicker>`), before line 39 (`<button>`)
+- `src/app/globals.css:1-17` (branch: GH-2, commit: 68c53c4) — confirms no semantic token custom properties exist; only `--color-pitch` and `--color-pitch-light`; raw Tailwind classes required throughout

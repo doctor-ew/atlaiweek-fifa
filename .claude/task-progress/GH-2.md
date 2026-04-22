@@ -1,17 +1,12 @@
-# GH-2 — /drprod Progress
+# GH-2 — Implementation Progress
 
-**Started:** 2026-04-18
-**Issue:** #2 — feat: MartaStatusCard — real-time MARTA service status for Match Day sidebar
+**Started:** 2026-04-21
+**Branch:** GH-2
 **Spec:** docs/GH-2/SPEC.md
-**Status:** Spec approved
+**Approach:** B — LineRow subcomponent + deriveStatuses() single-pass O(n)
 
 ## Steps
-- [x] GitHub Issue confirmed
-- [x] Grounding questions answered
-- [x] code-fact-extractor run
-- [x] Spec approved
-- [ ] /dreng verification
-- [ ] /implement complete
-- [ ] PR opened
-
-## Init time: 2026-04-18T16:44:02Z
+- [x] Create src/components/MartaStatusCard.tsx
+- [x] Edit src/components/Sidebar.tsx to mount MartaStatusCard
+- [x] Run TypeScript check (tsc --noEmit — zero errors)
+- [ ] /review GH-2

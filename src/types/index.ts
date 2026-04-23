@@ -6,6 +6,7 @@ export interface Vehicle {
   route: string;
   lat: number;
   lng: number;
+  waitSeconds?: number;
 }
 
 export interface Match {

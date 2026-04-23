@@ -47,8 +47,9 @@ async function fetchBusVehicles(): Promise<Vehicle[]> {
 interface MartaTrainRecord {
   TRAIN_ID: string;
   LINE: string;
-  LATITUDE: string;
-  LONGITUDE: string;
+  STATION: string;
+  WAITING_SECONDS: string;
+  IS_REALTIME: string;
 }
 
 async function fetchTrainVehicles(): Promise<Vehicle[]> {
@@ -62,14 +63,20 @@ async function fetchTrainVehicles(): Promise<Vehicle[]> {
 
   const data: MartaTrainRecord[] = await res.json() as MartaTrainRecord[];
 
+  // API returns one arrival record per train per upcoming station.
+  // Deduplicate by TRAIN_ID to get one Vehicle per active train.
+  const seen = new Set<string>();
   return data
-    .filter((t) => t.LATITUDE && t.LONGITUDE)
+    .filter((t) => t.IS_REALTIME === 'true' && !seen.has(t.TRAIN_ID) && seen.add(t.TRAIN_ID))
     .map((t) => ({
       id: `train-${t.TRAIN_ID}`,
       type: 'train' as const,
       route: LINE_NAME_MAP[t.LINE] ?? t.LINE,
-      lat: parseFloat(t.LATITUDE),
-      lng: parseFloat(t.LONGITUDE),
+      // API provides arrival predictions, not GPS. Use wait seconds as a
+      // sortable proxy; MartaStatusCard reads waitSeconds for status display.
+      lat: 0,
+      lng: 0,
+      waitSeconds: parseInt(t.WAITING_SECONDS, 10) || 0,
     }));
 }
 

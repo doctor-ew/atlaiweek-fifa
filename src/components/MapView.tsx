@@ -94,6 +94,8 @@ export default function MapView() {
       });
 
       trafficLayerRef.current = new google.maps.TrafficLayer();
+      trafficVisibleRef.current = true;
+      trafficLayerRef.current.setMap(map);
 
       // Transit layer — renders official MARTA rail lines with correct colors
       const transitLayer = new google.maps.TransitLayer();
@@ -103,7 +105,7 @@ export default function MapView() {
         'mx-1 mt-2 px-3 py-1 rounded bg-white text-gray-800 text-sm shadow font-medium hover:bg-gray-100';
 
       const trafficBtn = document.createElement('button');
-      trafficBtn.textContent = 'Traffic';
+      trafficBtn.textContent = 'Hide Traffic';
       trafficBtn.className = btnClass;
       trafficBtn.addEventListener('click', () => {
         trafficVisibleRef.current = !trafficVisibleRef.current;

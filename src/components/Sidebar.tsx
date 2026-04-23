@@ -5,6 +5,7 @@ import type { Match, Zone, DelayState } from '@/types';
 import MatchSelector from './MatchSelector';
 import ZonePicker from './ZonePicker';
 import RecommendationArea from './RecommendationArea';
+import MartaStatusCard from './MartaStatusCard';
 
 interface Props {
   matches: Match[];
@@ -24,6 +25,10 @@ export default function Sidebar({ matches, delayState }: Props) {
         <h1 className="text-lg font-bold text-white">Match Day ATL</h1>
         <p className="text-xs text-gray-400">FIFA World Cup 2026 · Mercedes-Benz Stadium</p>
       </div>
+
+      <MartaStatusCard />
+
+      <div className="border-t border-gray-800" />
 
       <MatchSelector
         matches={matches}

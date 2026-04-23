@@ -58,6 +58,20 @@ export default function Sidebar({ matches, delayState }: Props) {
           trigger={trigger}
         />
       )}
+
+      <div className="mt-auto pt-4 border-t border-gray-800">
+        <p className="text-center text-[10px] text-gray-500">
+          &copy; {new Date().getFullYear()}{' '}
+          <a
+            href="https://cto2go.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#e5aa48] hover:text-[#ee8c4a] transition-colors"
+          >
+            CTO2Go.co LLC
+          </a>
+        </p>
+      </div>
     </aside>
   );
 }
